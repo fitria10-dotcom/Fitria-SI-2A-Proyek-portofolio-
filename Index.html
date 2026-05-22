@@ -394,8 +394,7 @@ function renderTable() {
     const empty = document.getElementById('emptyState');
     tbody.innerHTML = '';
     if (transactions.length === 0) { empty.style.display = 'block'; return; }
-    empty.style.display = 'none';
-  [...transactions].reverse().forEach(t => {
+    empty.style.display = 'none';[...transactions].reverse().forEach(t => {
         const row = document.createElement('tr');
         const color  = t.type==='income' ? 'var(--success)' : 'var(--danger)';
         const prefix = t.type==='income' ? '+' : '-';
