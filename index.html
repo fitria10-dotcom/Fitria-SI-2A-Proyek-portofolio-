@@ -373,4 +373,93 @@ function quickAdd(e, itemId) {
     e.stopPropagation();
     const item = catalog.find(i => i.id === itemId);
     if (!item) return;
-    transactions.push({ id: Date.now(), description: 'Penjualan ' + item.name, type: 'income', am
+    transactions.push({ id: Date.now(), description: 'Penjualan ' + item.name, type: 'income', amount: item.price });
+    updateDashboard();
+    showToast('🛒 ' + item.name + ' langsung dicatat!');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function updateDashboard() {
+    const income  = transactions.filter(t => t.type==='income').reduce((s,t) => s+t.amount, 0);
+    const expense = transactions.filter(t => t.type==='expense').reduce((s,t) => s+t.amount, 0);
+    document.getElementById('totalBalance').innerText  = formatRupiah(income - expense);
+    document.getElementById('totalIncome').innerText   = formatRupiah(income);
+    document.getElementById('totalExpense').innerText  = formatRupiah(expense);
+    renderTable();
+    renderChart(income, expense);
+}
+
+function renderTable() {
+    const tbody = document.getElementById('transactionTableBody');
+    const empty = document.getElementById('emptyState');
+    tbody.innerHTML = '';
+    if (transactions.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+[...transactions].reverse().forEach(t => {
+        const row = document.createElement('tr');
+        const color  = t.type==='income' ? 'var(--success)' : 'var(--danger)';
+        const prefix = t.type==='income' ? '+' : '-';
+        row.innerHTML = `
+            <td>${t.description}</td>
+            <td><span class="badge ${t.type}">${t.type==='income' ? 'Pemasukan' : 'Pengeluaran'}</span></td>
+            <td style="color:${color};font-weight:600;">${prefix} ${formatRupiah(t.amount)}</td>
+            <td><button class="btn-delete" onclick="deleteTransaction(${t.id})">✕ Hapus</button></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function deleteTransaction(id) {
+    transactions = transactions.filter(t => t.id !== id);
+    updateDashboard();
+    showToast('🗑️ Transaksi dihapus');
+}
+
+function renderChart(income, expense) {
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    const isEmpty = income === 0 && expense === 0;
+    chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pemasukan', 'Pengeluaran'],
+            datasets: [{
+                data: isEmpty ? [1,1] : [income, expense],
+                backgroundColor: isEmpty ? ['#374151','#4b5563'] : ['#10b981','#ef4444'],
+                borderWidth: 0, hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#f3f4f6', font: { family: 'Plus Jakarta Sans', size: 12 } } }
+            },
+            cutout: '75%'
+        }
+    });
+}
+
+// ── FORM SUBMIT ───────────────────────────────────────────────
+document.getElementById('financeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const desc   = document.getElementById('description').value;
+    const type   = document.getElementById('type').value;
+    const amount = parseInt(document.getElementById('amount').value);
+    if (desc && type && amount) {
+        transactions.push({ id: Date.now(), description: desc, type, amount });
+        updateDashboard();
+        document.getElementById('description').value = '';
+        document.getElementById('amount').value = '';
+        showToast('✅ Transaksi berhasil dicatat!');
+    }
+});
+
+document.getElementById('searchItem').addEventListener('input', renderCatalog);
+
+// ── INIT ──────────────────────────────────────────────────────
+buildCategoryFilter();
+renderCatalog();
+updateDashboard();
+</script>
+</body>
+</html>
